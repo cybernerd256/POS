@@ -86,7 +86,7 @@ export function StaffModal({ onClose }: StaffModalProps) {
                             <label className="block text-sm font-bold text-muted-foreground mb-1.5">Role <span className="text-danger">*</span></label>
                             <select
                                 value={role}
-                                onChange={e => setRole(e.target.value as any)}
+                                onChange={e => setRole(e.target.value as 'admin' | 'manager' | 'cashier')}
                                 className="w-full bg-base border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors appearance-none"
                             >
                                 <option value="cashier">Cashier</option>

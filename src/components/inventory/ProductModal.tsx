@@ -13,13 +13,16 @@ interface ProductModalProps {
 
 export function ProductModal({ product, onClose }: ProductModalProps) {
     const categories = useLiveQuery(() => db.categories.toArray()) || [];
+    const suppliers = useLiveQuery(() => db.suppliers.toArray()) || [];
     const [formData, setFormData] = useState<Partial<Product>>({
         name: '',
         buying_price: 0,
         selling_price: 0,
         stock_quantity: 0,
         barcode: '',
-        category_id: ''
+        category_id: '',
+        autoRestockThreshold: 0,
+        supplier_id: ''
     });
     const [showScanner, setShowScanner] = useState(false);
 
@@ -39,6 +42,8 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
             stock_quantity: Number(formData.stock_quantity),
             barcode: formData.barcode || '',
             category_id: formData.category_id || '',
+            autoRestockThreshold: Number(formData.autoRestockThreshold) || 0,
+            supplier_id: formData.supplier_id || '',
             branch_id: 'mock-branch',
             synced: false,
             updated_at: new Date().toISOString()
@@ -93,6 +98,20 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                                 <select value={formData.category_id} onChange={e => setFormData({ ...formData, category_id: e.target.value })} className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ring-primary text-foreground">
                                     <option value="">Uncategorized</option>
                                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Auto-Restock Threshold</label>
+                                <input type="number" value={formData.autoRestockThreshold || ''} onChange={e => setFormData({ ...formData, autoRestockThreshold: e.target.valueAsNumber })} className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ring-primary" placeholder="0" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Preferred Supplier</label>
+                                <select value={formData.supplier_id} onChange={e => setFormData({ ...formData, supplier_id: e.target.value })} className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ring-primary text-foreground">
+                                    <option value="">None</option>
+                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                         </div>

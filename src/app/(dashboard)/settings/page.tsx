@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from 'react';
-import { CreditCard, ShieldCheck, CheckCircle2, Store } from 'lucide-react';
+import { useAppStore } from '@/store/appStore';
+import { CreditCard, ShieldCheck, CheckCircle2, Store, Receipt } from 'lucide-react';
 
 import { UpgradeModal } from '@/components/settings/UpgradeModal';
 
 export default function SettingsPage() {
+    const { uraVatEnabled, setUraVatEnabled } = useAppStore();
     const [tier, setTier] = useState<'BASIC' | 'PRO'>('BASIC');
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
@@ -95,6 +97,32 @@ export default function SettingsPage() {
                                 </button>
                             )}
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tax & Compliance Settings */}
+            <div className="bg-surface border border-border shadow-sm rounded-2xl overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-border bg-elevated">
+                    <h2 className="font-heading font-bold text-lg flex items-center gap-2">
+                        <Receipt className="w-5 h-5 text-primary" /> Tax & Compliance
+                    </h2>
+                </div>
+                <div className="p-6">
+                    <div className="flex items-center justify-between p-4 bg-base border border-border rounded-xl">
+                        <div>
+                            <p className="font-bold text-sm">URA VAT Mode</p>
+                            <p className="text-xs text-muted-foreground mt-1">Automatically adds 18% VAT to all transactions</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={uraVatEnabled}
+                                onChange={(e) => setUraVatEnabled(e.target.checked)}
+                            />
+                            <div className="w-11 h-6 bg-surface border border-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-muted-foreground peer-checked:after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                        </label>
                     </div>
                 </div>
             </div>

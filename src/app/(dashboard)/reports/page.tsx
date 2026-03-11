@@ -16,8 +16,8 @@ export default function ReportsPage() {
     const products = useLiveQuery(() => db.products.where('branch_id').equals(activeBranch.id).toArray(), [activeBranch.id]) || [];
 
     const handleExportCSV = () => {
-        let dataToExport: any[] = [];
-        let filename = `${reportType}_report_${new Date().toISOString().split('T')[0]}.csv`;
+        let dataToExport: Record<string, string | number | undefined>[] = [];
+        const filename = `${reportType}_report_${new Date().toISOString().split('T')[0]}.csv`;
 
         if (reportType === 'sales') {
             dataToExport = transactions.map(t => ({
@@ -72,7 +72,7 @@ export default function ReportsPage() {
                         <label className="block text-sm font-bold text-muted-foreground mb-2">Report Type</label>
                         <select
                             value={reportType}
-                            onChange={(e) => setReportType(e.target.value as any)}
+                            onChange={(e) => setReportType(e.target.value as 'sales' | 'inventory')}
                             className="w-full bg-base border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors appearance-none"
                         >
                             <option value="sales">Sales Summary</option>

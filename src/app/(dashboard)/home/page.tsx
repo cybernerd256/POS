@@ -122,7 +122,16 @@ export default function DashboardHome() {
     );
 }
 
-function KPICard({ title, amount, icon, format = 'currency', trend, isPositive }: any) {
+interface KPICardProps {
+    title: string;
+    amount: number;
+    icon: React.ReactNode;
+    format?: 'currency' | 'number';
+    trend: string;
+    isPositive: boolean;
+}
+
+function KPICard({ title, amount, icon, format = 'currency', trend, isPositive }: KPICardProps) {
     return (
         <div className="bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col gap-3 group hover:border-primary/30 transition-colors">
             <div className="flex justify-between items-start">

@@ -10,7 +10,7 @@ export function CustomerSelectorModal({ onClose }: { onClose: () => void }) {
     const [search, setSearch] = useState('');
     const customers = useLiveQuery(() =>
         db.customers
-            .filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search))
+            .filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone?.includes(search) ?? false))
             .toArray()
     ) || [];
 
@@ -34,7 +34,7 @@ export function CustomerSelectorModal({ onClose }: { onClose: () => void }) {
             phone: newCust.phone,
             branch_id: 'mock-branch',
             synced: false,
-            loyalty_points: 0
+            points: 0
         };
 
         await db.customers.add(customer);
@@ -89,7 +89,7 @@ export function CustomerSelectorModal({ onClose }: { onClose: () => void }) {
                                         </div>
                                         <div className="text-right">
                                             <span className="text-xs text-primary font-bold bg-primary/10 px-2 py-1 rounded-full border border-primary/20">
-                                                {c.loyalty_points} pts
+                                                {c.points} pts
                                             </span>
                                         </div>
                                     </button>

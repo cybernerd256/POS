@@ -29,7 +29,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
             decoder: {
                 readers: ["ean_reader", "ean_8_reader", "upc_reader", "upc_e_reader", "code_128_reader"]
             }
-        }, (err: any) => {
+        }, (err: unknown) => {
             if (err) {
                 setError("Camera access denied or unavailable.");
                 console.error(err);
@@ -38,8 +38,8 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
             Quagga.start();
         });
 
-        Quagga.onDetected((result: any) => {
-            if (result && result.codeResult && result.codeResult.code) {
+        Quagga.onDetected((result: { codeResult?: { code?: string | null } }) => {
+            if (result?.codeResult?.code) {
                 Quagga.stop();
                 onScan(result.codeResult.code);
             }

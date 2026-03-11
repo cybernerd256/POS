@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, Product } from "@/lib/db/dexie";
-import { Plus, Search, Edit, Trash2, Tag, Upload, ArrowRightLeft } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Tag, Upload, ArrowRightLeft, Sparkles, X } from "lucide-react";
 import { ProductModal } from "@/components/inventory/ProductModal";
 import { CategoryModal } from "@/components/inventory/CategoryModal";
 import { StockTransferModal } from "@/components/inventory/StockTransferModal";
@@ -21,6 +21,8 @@ export default function InventoryPage() {
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
+    const [predictions, setPredictions] = useState<Array<{ productId: string; productName: string; currentStock: number; suggestedQuantity: number; urgency: 'Low' | 'Medium' | 'High' | 'Critical'; reason: string }> | null>(null);
+    const [isPredicting, setIsPredicting] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,7 +57,7 @@ export default function InventoryPage() {
             skipEmptyLines: true,
             complete: async (results) => {
                 try {
-                    const newProducts = results.data.map((row: any) => ({
+                    const newProducts = (results.data as Record<string, string>[]).map(row => ({
                         id: crypto.randomUUID(),
                         branch_id: activeBranch.id,
                         name: row.name || 'Unnamed Product',
@@ -86,6 +88,29 @@ export default function InventoryPage() {
         });
     };
 
+    const handlePredictRestock = async () => {
+        setIsPredicting(true);
+        setPredictions(null);
+        try {
+            const res = await fetch('/api/ai/smart-restock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ products: filteredProducts })
+            });
+            const data = await res.json();
+            if (data.predictions) {
+                setPredictions(data.predictions);
+            } else {
+                alert("Failed to fetch predictions.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error running predictor.");
+        } finally {
+            setIsPredicting(false);
+        }
+    };
+
     return (
         <div className="flex flex-col gap-6 h-full">
             <div className="flex items-center justify-between">
@@ -113,6 +138,14 @@ export default function InventoryPage() {
                         className="bg-surface border border-border text-foreground px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-elevated transition-colors"
                     >
                         <Tag className="w-4 h-4" /> Categories
+                    </button>
+                    <button
+                        onClick={handlePredictRestock}
+                        disabled={isPredicting || filteredProducts.length === 0}
+                        className="bg-accent text-accent-foreground px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                        <Sparkles className={`w-4 h-4 ${isPredicting ? 'animate-pulse' : ''}`} />
+                        {isPredicting ? 'Analyzing...' : 'SmartRestock™'}
                     </button>
                     <button onClick={openNewModal} className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-opacity">
                         <Plus className="w-4 h-4" /> Add Product
@@ -228,6 +261,74 @@ export default function InventoryPage() {
                     product={transferProduct}
                     onClose={() => setTransferProduct(null)}
                 />
+            )}
+
+            {predictions && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+                    <div className="bg-surface border border-border text-foreground w-full max-w-3xl rounded-xl shadow-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between p-6 border-b border-border bg-elevated/30">
+                            <div className="flex flex-col gap-1">
+                                <h2 className="text-xl font-heading font-bold flex items-center gap-2">
+                                    <Sparkles className="w-5 h-5 text-accent" />
+                                    SmartRestock™ Insights
+                                </h2>
+                                <p className="text-sm text-muted-foreground">AI-driven recommendations to optimize your inventory.</p>
+                            </div>
+                            <button
+                                onClick={() => setPredictions(null)}
+                                className="p-2 bg-base border border-border rounded-lg hover:bg-elevated transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto max-h-[60vh] flex flex-col gap-4">
+                            {predictions.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Sparkles className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
+                                    <h3 className="text-lg font-medium">Inventory looks healthy!</h3>
+                                    <p className="text-muted-foreground mt-1">No critical restocks recommended at this time.</p>
+                                </div>
+                            ) : (
+                                predictions.map((pred, i) => (
+                                    <div key={i} className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 bg-base border border-border rounded-xl shadow-sm hover:border-accent/50 transition-colors">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-bold text-lg">{pred.productName}</h3>
+                                                <span className={`px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded border ${pred.urgency === 'Critical' ? 'bg-danger/10 text-danger border-danger/20 animate-pulse' :
+                                                    pred.urgency === 'High' ? 'bg-warning/10 text-warning border-warning/20' :
+                                                        'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                                    }`}>
+                                                    {pred.urgency} Priority
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground">{pred.reason}</p>
+                                        </div>
+                                        <div className="flex items-center gap-6 sm:w-auto w-full justify-between sm:justify-end shrink-0 bg-surface rounded-lg p-3 border border-border">
+                                            <div className="text-center">
+                                                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Current</p>
+                                                <p className="font-mono font-bold text-danger">{pred.currentStock}</p>
+                                            </div>
+                                            <div className="w-px h-8 bg-border"></div>
+                                            <div className="text-center">
+                                                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Action</p>
+                                                <p className="font-mono font-bold text-accent">+ {pred.suggestedQuantity}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <div className="p-4 border-t border-border bg-base flex justify-end">
+                            <button
+                                onClick={() => setPredictions(null)}
+                                className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-bold hover:opacity-90 transition-opacity"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

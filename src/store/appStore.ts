@@ -11,6 +11,8 @@ interface AppState {
     setActiveBranch: (branch: Branch) => void;
     userRole: 'admin' | 'manager' | 'cashier';
     userId: string;
+    uraVatEnabled: boolean;
+    setUraVatEnabled: (enabled: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -23,5 +25,7 @@ export const useAppStore = create<AppState>((set) => ({
     ],
     userRole: 'admin',
     userId: 'mock-user-1',
-    setActiveBranch: (branch) => set({ activeBranch: branch })
+    uraVatEnabled: false,
+    setActiveBranch: (branch) => set({ activeBranch: branch }),
+    setUraVatEnabled: (enabled) => set({ uraVatEnabled: enabled })
 }));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, HeldSale, Transaction } from "@/lib/db/dexie";
+import { db, HeldSale, Transaction, PurchaseOrder, CartItem, Product } from "@/lib/db/dexie";
 import { usePosStore } from "@/store/posStore";
 import { Search, ScanBarcode, CheckCircle2, Trash2, ShoppingCart, UserPlus, PauseCircle, PlayCircle, Percent } from "lucide-react";
 import { SyncEngine } from "@/lib/sync/syncEngine";
@@ -9,6 +9,7 @@ import { useState } from "react";
 import { CustomerSelectorModal } from "@/components/pos/CustomerSelectorModal";
 import { BarcodeScanner } from "@/components/pos/BarcodeScanner";
 import { PostSaleModal } from "@/components/pos/PostSaleModal";
+import { useAppStore } from "@/store/appStore";
 
 export default function POSPage() {
     const products = useLiveQuery(() => db.products.toArray()) || [];
@@ -28,9 +29,10 @@ export default function POSPage() {
         clearCart,
         loadHeldSale,
         getSubtotal,
-        getDiscountAmount,
-        getTotal
+        getDiscountAmount
     } = usePosStore();
+
+    const { uraVatEnabled } = useAppStore();
 
     const [showHeldSales, setShowHeldSales] = useState(false);
     const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -40,6 +42,12 @@ export default function POSPage() {
     const handleCompleteSale = async () => {
         if (cart.length === 0) return;
 
+        const subtotal = getSubtotal();
+        const discountAmount = getDiscountAmount();
+        const baseTotal = Math.max(0, subtotal - discountAmount);
+        const vatAmount = uraVatEnabled ? baseTotal * 0.18 : 0;
+        const finalTotal = baseTotal + vatAmount;
+
         const transaction: Transaction = {
             id: crypto.randomUUID(),
             items: cart.map(c => ({
@@ -48,9 +56,9 @@ export default function POSPage() {
                 price: c.price,
                 discount: c.discount
             })),
-            subtotal: getSubtotal(),
-            discount_amount: getDiscountAmount(),
-            total: getTotal(),
+            subtotal: subtotal,
+            discount_amount: discountAmount,
+            total: finalTotal,
             payment_method: paymentMethod,
             cashier_id: 'mock-cashier',
             branch_id: 'mock-branch',
@@ -64,7 +72,36 @@ export default function POSPage() {
         for (const item of cart) {
             const prod = await db.products.get(item.product_id);
             if (prod) {
-                await db.products.update(prod.id, { stock_quantity: prod.stock_quantity - item.quantity });
+                const newStock = prod.stock_quantity - item.quantity;
+                await db.products.update(prod.id, { stock_quantity: newStock });
+
+                // Auto-Restock Rule Logic
+                if (prod.autoRestockThreshold && newStock <= prod.autoRestockThreshold && prod.supplier_id) {
+                    const orderQuantity = Math.max(10, prod.autoRestockThreshold * 2);
+                    const po: PurchaseOrder = {
+                        id: crypto.randomUUID(),
+                        branch_id: prod.branch_id,
+                        supplier_id: prod.supplier_id,
+                        po_number: `PO-AUTO-${Date.now().toString().slice(-6)}`,
+                        items: [{
+                            product_id: prod.id,
+                            name: prod.name,
+                            quantity: orderQuantity,
+                            unit_price: prod.buying_price
+                        }],
+                        total_amount: orderQuantity * prod.buying_price,
+                        status: 'draft',
+                        synced: false,
+                        created_at: new Date().toISOString()
+                    };
+                    // Avoid duplicating auto-POs if stock drops multiple times below threshold
+                    const existingDrafts = await db.purchaseOrders.where('supplier_id').equals(prod.supplier_id).toArray();
+                    const hasDraftForProduct = existingDrafts.some(d => d.status === 'draft' && d.items.some(i => i.product_id === prod.id));
+
+                    if (!hasDraftForProduct) {
+                        await db.purchaseOrders.add(po);
+                    }
+                }
             }
         }
 
@@ -80,9 +117,11 @@ export default function POSPage() {
         const held: HeldSale = {
             id: crypto.randomUUID(),
             label,
-            cart,
-            cartDiscount,
-            customer,
+            items: cart,
+            subtotal: getSubtotal(),
+            discount: cartDiscount,
+            customer: customer || undefined,
+            branch_id: 'mock-branch',
             created_at: new Date().toISOString()
         };
         await db.heldSales.add(held);
@@ -90,7 +129,7 @@ export default function POSPage() {
     };
 
     const handleResumeSale = async (held: HeldSale) => {
-        loadHeldSale(held.cart, held.cartDiscount, held.customer);
+        loadHeldSale(held.items as (CartItem & { product: Product })[], held.discount || { type: 'fixed', value: 0 }, held.customer || null);
         await db.heldSales.delete(held.id);
         setShowHeldSales(false);
     };
@@ -106,7 +145,7 @@ export default function POSPage() {
     };
 
     return (
-        <div className="flex h-full gap-6">
+        <div className="flex flex-col lg:flex-row h-full gap-6">
             {/* PRODUCT GRID SECTION */}
             <div className="flex-1 flex flex-col gap-4">
                 {/* Search Bar & Actions */}
@@ -175,7 +214,7 @@ export default function POSPage() {
             </div>
 
             {/* CART SECTION */}
-            <div className="w-80 lg:w-96 bg-surface border border-border rounded-xl flex flex-col overflow-hidden shrink-0 shadow-lg relative">
+            <div className="w-full lg:w-96 bg-surface border border-border rounded-xl flex flex-col h-[60vh] lg:h-auto overflow-hidden shrink-0 shadow-lg relative">
                 {/* Cart Header */}
                 <div className="p-4 border-b border-border bg-elevated flex justify-between items-center">
                     <h2 className="font-heading font-bold text-lg">Current Order</h2>
@@ -272,10 +311,19 @@ export default function POSPage() {
                         </div>
                     )}
 
+                    {uraVatEnabled && (
+                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                            <span>URA VAT (18%)</span>
+                            <span className="font-mono">{new Intl.NumberFormat('en-UG').format(Math.max(0, getSubtotal() - getDiscountAmount()) * 0.18)}</span>
+                        </div>
+                    )}
+
                     <div className="flex justify-between items-center pt-2 border-t border-border/50">
                         <span className="font-bold text-foreground">Total</span>
                         <span className="text-2xl font-mono font-bold text-primary">
-                            {new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', minimumFractionDigits: 0 }).format(getTotal())}
+                            {new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', minimumFractionDigits: 0 }).format(
+                                Math.max(0, getSubtotal() - getDiscountAmount()) + (uraVatEnabled ? Math.max(0, getSubtotal() - getDiscountAmount()) * 0.18 : 0)
+                            )}
                         </span>
                     </div>
 
@@ -317,7 +365,7 @@ export default function POSPage() {
                                         <div key={h.id} className="bg-base p-3 rounded-lg border border-border flex items-center justify-between">
                                             <div>
                                                 <p className="font-semibold text-sm text-foreground">{h.label}</p>
-                                                <p className="text-xs text-muted-foreground">{h.cart.length} items · {new Date(h.created_at).toLocaleTimeString()}</p>
+                                                <p className="text-xs text-muted-foreground">{h.items.length} items · {new Date(h.created_at).toLocaleTimeString()}</p>
                                             </div>
                                             <button
                                                 onClick={() => handleResumeSale(h)}

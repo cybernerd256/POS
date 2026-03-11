@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, CreditCard, CheckCircle2, Phone, User, Mail, Sparkles } from 'lucide-react';
+import { X, CreditCard, Phone, User, Mail, Sparkles } from 'lucide-react';
 
 interface UpgradeModalProps {
     onClose: () => void;
@@ -116,8 +116,8 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
                                 <button
                                     onClick={() => setPaymentMethod('momo')}
                                     className={`p-4 border rounded-xl flex flex-col items-center gap-2 transition-all ${paymentMethod === 'momo'
-                                            ? 'bg-[#E5A823]/10 border-[#E5A823] text-[#E5A823]'
-                                            : 'bg-base border-border hover:bg-elevated'
+                                        ? 'bg-[#E5A823]/10 border-[#E5A823] text-[#E5A823]'
+                                        : 'bg-base border-border hover:bg-elevated'
                                         }`}
                                 >
                                     <Phone className="w-6 h-6" />
@@ -126,8 +126,8 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
                                 <button
                                     onClick={() => setPaymentMethod('card')}
                                     className={`p-4 border rounded-xl flex flex-col items-center gap-2 transition-all ${paymentMethod === 'card'
-                                            ? 'bg-info/10 border-info text-info'
-                                            : 'bg-base border-border hover:bg-elevated'
+                                        ? 'bg-info/10 border-info text-info'
+                                        : 'bg-base border-border hover:bg-elevated'
                                         }`}
                                 >
                                     <CreditCard className="w-6 h-6" />

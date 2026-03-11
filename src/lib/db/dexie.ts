@@ -16,6 +16,8 @@ export interface Product {
     barcode?: string;
     category_id: string;
     branch_id: string;
+    autoRestockThreshold?: number;
+    supplier_id?: string;
     synced: boolean;
     updated_at: string;
 }
@@ -38,7 +40,7 @@ export interface SyncQueue {
     id?: number;
     table: string;
     operation: 'insert' | 'update' | 'delete';
-    payload: any;
+    payload: Record<string, unknown>;
     attempts: number;
     created_at: string;
 }

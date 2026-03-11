@@ -24,6 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "SwiftPOS - Point of Sale",
   description: "Luxury Dark Utility POS SaaS for African SMBs",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

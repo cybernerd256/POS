@@ -46,7 +46,7 @@ export class SyncEngine {
         }
     }
 
-    static async pullLatest(_branchId: string) {
+    static async pullLatest() {
         // fetch server updates -> IndexedDB (placeholder for now)
     }
 

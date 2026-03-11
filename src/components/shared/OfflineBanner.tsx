@@ -16,7 +16,7 @@ export function OfflineBanner() {
             try {
                 const count = await db.syncQueue.count();
                 setPendingSync(count);
-            } catch (e) {
+            } catch {
                 // Handle offline db error
             }
         }, 2000);

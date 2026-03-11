@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { db } from '@/lib/db/dexie';
 import { useAppStore } from '@/store/appStore';
 import { X, Clock, DollarSign, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
 
 interface ShiftModalProps {
     isOpen: boolean;

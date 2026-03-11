@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { db, Product } from '@/lib/db/dexie';
 import { useAppStore } from '@/store/appStore';
 import { X, ArrowRightLeft } from 'lucide-react';
-import { useLiveQuery } from 'dexie-react-hooks';
 
 interface StockTransferModalProps {
     product: Product;
